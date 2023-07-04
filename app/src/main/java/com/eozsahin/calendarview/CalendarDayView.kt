@@ -53,34 +53,64 @@ data class Event(
     }
 }
 
+private val DUMMYDATE = LocalDate.of(2016, 2, 15)
+
 val events = listOf(
     Event(
-        id = "1",
-        startTime = LocalDateTime.of(2016, 2, 15, 9, 0, 0, 0),
-        endTime = LocalDateTime.of(2016, 2, 15, 10, 30, 0, 0),
-        title = "Emre's meeting -- Green",
+        id = "A",
+        startTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(9, 0, 0, 0)),
+        endTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(10, 30, 0, 0)),
+        title = "A",
         color = Color.Green
     ),
     Event(
-        id = "2",
-        startTime = LocalDateTime.of(2016, 2, 15, 10, 0, 0),
-        endTime = LocalDateTime.of(2016, 2, 15, 11, 0,0),
-        title = "Emre's first conflic -- Blue",
+        id = "B",
+        startTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(9, 15, 0)),
+        endTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(10, 0, 0)),
+        title = "B",
+        color = Color.Cyan
+    ),
+    Event(
+        id = "L",
+        startTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(9, 45, 0)),
+        endTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(10, 30, 0)),
+        title = "L",
+        color = Color.Magenta
+    ),
+    Event(
+        id = "Z",
+        startTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(10, 30, 0)),
+        endTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(12, 0, 0)),
+        title = "Z",
         color = Color.Blue
     ),
     Event(
-        id = "3",
-        startTime = LocalDateTime.of(2016, 2, 15, 13, 0, 0, 0),
-        endTime = LocalDateTime.of(2016, 2, 15, 14, 0, 0, 0),
-        title = "Emre's meeting -- Red",
+        id = "C",
+        startTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(10, 15, 0)),
+        endTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(12, 30 ,0)),
+        title = "C",
+        color = Color.LightGray
+    ),
+    Event(
+        id = "D",
+        startTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(12, 15, 0)),
+        endTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(13, 15, 0)),
+        title = "D",
         color = Color.Red
     ),
     Event(
-        id = "4",
-        startTime = LocalDateTime.of(2016, 2, 15, 14, 0, 0, 0),
-        endTime = LocalDateTime.of(2016, 2, 15, 15, 45, 0, 0),
-        title = "Emre's meeting -- DarkGray",
+        id = "F",
+        startTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(10, 40, 0)),
+        endTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(12, 50, 0)),
+        title = "F",
         color = Color.DarkGray
+    ),
+    Event(
+        id = "K",
+        startTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(12, 45, 0)),
+        endTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(13, 15, 0)),
+        title = "K",
+        color = Color.Gray
     ),
 )
 
@@ -90,10 +120,10 @@ fun CalendarDayView(
 //    events: List<Event>,
 //    date: LocalDate,
 ) {
-//    val uiEvents = remember(events) {
-//        events.map { it.toUIEvent() }.sortedBy { it.source.startTime }
-//    }
-    val collection = remember(events) {
+    val sortedEvents = remember(events) {
+        events.sortedBy { it.startTime }
+    }
+    val collection = remember(sortedEvents) {
         val numSlots = (HOUR_IN_MINS * DAY_IN_HOURS) / TIME_SLOT_MINS
         val timeSlots = (0..numSlots).map {
             val startMins = it * TIME_SLOT_MINS
@@ -104,7 +134,7 @@ fun CalendarDayView(
             val slotEnd = LocalDateTime.of(LocalDate.of(2016, 2, 15), endTime)
             val slotEvents: MutableList<UIEvent> = mutableListOf()
 
-            events.forEach {event ->
+            sortedEvents.forEach {event ->
                 val eventStart = event.startTime
                 val eventEnd = event.endTime
                 val isInsideSlot = eventStart.isBefore(slotStart) && eventEnd.isAfter(slotStart) ||
@@ -123,22 +153,9 @@ fun CalendarDayView(
                 events = slotEvents
             )
         }.toList()
-        timeSlots.map { slot ->
-            if (slot.events.isNotEmpty()) {
-               return@map slot
-            }
-
-            slot.events.forEach {
-
-            }
-        }
-
-        timeSlots.forEach {
-        }
-
         CalendarDayViewCollection(timeSlots = timeSlots)
     }
-    var uiEvents: List<UIEvent> = remember(collection) {
+    val uiEvents: List<UIEvent> = remember(collection) {
         val eventConflicts: MutableMap<UIEvent, MutableSet<String>> = mutableMapOf()
         val maxConflicts: MutableMap<UIEvent, Int> = mutableMapOf()
         collection.timeSlots.forEach { slots ->
@@ -158,7 +175,7 @@ fun CalendarDayView(
             }
         }
 
-        val list = events.map {
+        val list = sortedEvents.map {
             val uiEvent = it.toUIEvent()
             val conflicts = eventConflicts[uiEvent]
             if (conflicts.isNullOrEmpty()) {
@@ -185,7 +202,9 @@ fun CalendarDayView(
                 val conflict = visited.firstOrNull { conflictedEventId == it.id } ?: return@forEach
 
                 if (conflict.isDisplayed) {
-                    available[conflict.horizontalIndex] = false
+                    if (conflict.horizontalIndex < available.size) {
+                        available[conflict.horizontalIndex] = false
+                    }
                 }
             }
 
@@ -252,7 +271,7 @@ fun CalendarDayView(
 data class DpOffset(val x: Dp, val y: Dp)
 
 fun findStartOffset(
-    dayStart: LocalDateTime = LocalDateTime.of(2016, 2, 15, 8, 0, 0),
+    dayStart: LocalDateTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(8, 0, 0)),
     eventStart: LocalDateTime
 ): DpOffset {
     val durationMins = ChronoUnit.MINUTES.between(dayStart, eventStart)
@@ -263,7 +282,7 @@ fun findStartOffset(
 }
 
 fun UIEvent.findStartOffSet(
-    dayStart: LocalDateTime = LocalDateTime.of(2016, 2, 15, 8, 0, 0),
+    dayStart: LocalDateTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(8, 0, 0)),
     maxWidth: Dp,
 ): DpOffset {
     val durationMins = ChronoUnit.MINUTES.between(dayStart, this.source.startTime)
@@ -274,7 +293,7 @@ fun UIEvent.findStartOffSet(
 }
 
 fun findStartOffsetForEvent(
-    dayStart: LocalDateTime = LocalDateTime.of(2016, 2, 15, 8, 0, 0),
+    dayStart: LocalDateTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(8, 0, 0)),
     event: UIEvent
 ): DpOffset {
     return findStartOffset(dayStart, event.source.startTime)
@@ -288,15 +307,6 @@ fun UIEvent.findHeight(): Dp {
 }
 
 fun UIEvent.findWidth(maxWidth: Dp) = maxWidth / (this.maxCollisionForGivenTimeSlot + 1)
-
-fun Event.getCollisions(allEvents: List<Event>): Int {
-    // this shouldn't be greater than 3
-    return 1
-}
-
-fun UIEvent.calculateCollisions(allEvents: List<UIEvent>) {
-
-}
 
 fun getLocalTimeWithMins(totalMinutes: Long): LocalTime {
     if (totalMinutes == (HOUR_IN_MINS * DAY_IN_HOURS).toLong()) {
