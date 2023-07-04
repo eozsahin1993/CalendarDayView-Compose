@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -223,8 +224,8 @@ fun CalendarDayView(
                 uiEvents.forEach { event ->
                     Box(
                         modifier = Modifier
-                            .size(maxWidth / (event.maxCollisionForGivenTimeSlot + 1), event.findHeight())
-                            .dpOffset(event.findStartOffSet())
+                            .size(event.findWidth(maxWidth), event.findHeight())
+                            .dpOffset(event.findStartOffSet(maxWidth = maxWidth))
                             .clip(RoundedCornerShape(4.dp))
                             .background(event.source.color)
                             .clickable { }
@@ -267,7 +268,7 @@ fun UIEvent.findStartOffSet(
 ): DpOffset {
     val durationMins = ChronoUnit.MINUTES.between(dayStart, this.source.startTime)
     val startY = (durationMins * MIN_PER_DP.value).dp
-    val startX = (maxWidth / this.maxCollisionForGivenTimeSlot) * horizontalIndex
+    val startX = (maxWidth / (this.maxCollisionForGivenTimeSlot + 1)) * horizontalIndex
 
     return DpOffset(startX, startY)
 }
@@ -285,6 +286,8 @@ fun UIEvent.findHeight(): Dp {
     val durationInMins = ChronoUnit.MINUTES.between(start, end)
     return (MIN_PER_DP.value * durationInMins).dp
 }
+
+fun UIEvent.findWidth(maxWidth: Dp) = maxWidth / (this.maxCollisionForGivenTimeSlot + 1)
 
 fun Event.getCollisions(allEvents: List<Event>): Int {
     // this shouldn't be greater than 3
