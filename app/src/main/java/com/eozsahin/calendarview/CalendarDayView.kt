@@ -89,7 +89,7 @@ val events = listOf(
         startTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(10, 15, 0)),
         endTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(12, 30 ,0)),
         title = "C",
-        color = Color.LightGray
+        color = Color.Yellow
     ),
     Event(
         id = "D",
@@ -152,15 +152,14 @@ fun CalendarDayView(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
-            Row(Modifier.padding(top = 30.dp)) {
+            Row(Modifier.padding(top = 50.dp)) {
                 Column(Modifier.padding(horizontal = 8.dp)) {
-                    ((dayStart.hour)..HOURS_PER_DAY).forEach {
+                    ((dayStart.hour) until HOURS_PER_DAY).forEach {
                         Column(Modifier.height(HOUR_DP)) {
                             Text(text = "$it:00", style = Typography.labelMedium)
                         }
                     }
                 }
-                Box(Modifier.width(2.dp).fillMaxHeight().background(Color.Black))
                 BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
