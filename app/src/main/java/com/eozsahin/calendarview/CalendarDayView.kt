@@ -6,18 +6,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.eozsahin.calendarview.ui.models.*
+import com.eozsahin.calendarview.ui.theme.Typography
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -45,6 +47,15 @@ data class Event(
 private val DUMMYDATE = LocalDate.of(2016, 2, 15)
 
 val events = listOf(
+    Event(
+        id = "allday",
+        startTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(4, 15, 0)),
+        endTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(23, 15, 0)),
+        title = "Allday",
+        color = Color.Yellow,
+        isAllDayEvent = true
+    ),
+
     Event(
         id = "A",
         startTime = LocalDateTime.of(DUMMYDATE, LocalTime.of(8, 15, 0, 0)),
@@ -110,18 +121,23 @@ fun CalendarDayView(
     modifier: Modifier = Modifier,
     defaultDayStart: LocalTime = LocalTime.of(7, 0, 0),
 ) {
-    val sortedEvents = remember(events) {
-        events.sortedBy { it.startTime }
+    val sortedRegularEvents = remember(events) {
+        events.filter { !it.isAllDayEvent }
+            .sortedBy { it.startTime }
     }
-    val dayStart: LocalDateTime = remember(sortedEvents) {
-        sortedEvents.firstOrNull()?.startTime?.minusHours(1)?.truncatedTo(ChronoUnit.HOURS)
+    val dayStart: LocalDateTime = remember(sortedRegularEvents) {
+        sortedRegularEvents.firstOrNull()?.startTime?.minusHours(1)?.truncatedTo(ChronoUnit.HOURS)
             ?: LocalDateTime.of(date, defaultDayStart)
     }
-    val collection = remember(sortedEvents) {
-        generateCalendarDayViewCollection(sortedEvents)
+    val collection = remember(sortedRegularEvents) {
+        generateCalendarDayViewCollection(sortedRegularEvents)
     }
-    val uiEvents: List<UIEvent> = remember(collection) {
-        prepareUIEvents(sortedEvents, collection)
+    val regularUIEvents: List<UIEvent> = remember(collection) {
+        prepareUIEvents(sortedRegularEvents, collection)
+    }
+    val allDayUIEvents = remember(events) {
+        events.filter { it.isAllDayEvent }
+            .map { it.toUIEvent() }
     }
 
     val currentTimeIndicatorHeight = findStartHeight(
@@ -130,42 +146,72 @@ fun CalendarDayView(
             DUMMYDATE, LocalDateTime.now().toLocalTime())
     )
 
-    Column(
-        modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())) {
-        Row {
-            Column(Modifier.padding(horizontal = 8.dp)) {
-                ((dayStart.hour)..HOURS_PER_DAY).forEach {
-                    Column(Modifier.height(HOUR_DP)) {
-                        Text(text = "$it")
+    Box {
+        Column(
+            modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        ) {
+            Row(Modifier.padding(top = 30.dp)) {
+                Column(Modifier.padding(horizontal = 8.dp)) {
+                    ((dayStart.hour)..HOURS_PER_DAY).forEach {
+                        Column(Modifier.height(HOUR_DP)) {
+                            Text(text = "$it:00", style = Typography.labelMedium)
+                        }
                     }
+                }
+                Box(Modifier.width(2.dp).fillMaxHeight().background(Color.Black))
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp)
+                ) {
+                    regularUIEvents.forEach { event ->
+                        Box(
+                            modifier = Modifier
+                                .size(event.findWidth(maxWidth), event.findHeight())
+                                .dpOffset(event.findStartOffSet(dayStart, maxWidth))
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(event.source.color)
+                                .clickable { }
+                                .padding(8.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Text(event.source.title)
+                        }
+                    }
+                    Divider(
+                        modifier = Modifier
+                            .offset(0.dp, currentTimeIndicatorHeight),
+                        color = Color.DarkGray
+                    )
                 }
             }
-            BoxWithConstraints(
-                modifier = Modifier
+        }
+        Surface(shadowElevation = 8.dp) {
+
+
+            Row(
+                Modifier
                     .fillMaxWidth()
-                    .padding(top = 10.dp)
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .background(MaterialTheme.colorScheme.background),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                uiEvents.forEach { event ->
-                    Box(
-                        modifier = Modifier
-                            .size(event.findWidth(maxWidth), event.findHeight())
-                            .dpOffset(event.findStartOffSet(dayStart, maxWidth))
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(event.source.color)
-                            .clickable { }
-                            .padding(8.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Text(event.source.title)
+                Text("all-day", modifier = Modifier.padding(end = 8.dp),
+                    style = Typography.labelSmall
+                    )
+
+                Column(Modifier.weight(1f)) {
+                    allDayUIEvents.forEach {
+                        Text(it.source.title, modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.LightGray)
+                            .clickable {  }
+                            .padding(horizontal = 8.dp, vertical = 4.dp))
                     }
                 }
-                Divider(
-                    modifier = Modifier
-                        .offset(0.dp, currentTimeIndicatorHeight),
-                    color = Color.DarkGray
-                )
             }
         }
     }
